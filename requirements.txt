@@ -1,0 +1,9 @@
+Flask>=3.1,<4
+pandas>=2.2
+numpy>=1.26
+# The saved models were trained with this exact scikit-learn version; keep it pinned.
+scikit-learn==1.8.0
+joblib>=1.4
+openpyxl>=3.1
+# Production server (optional, cross-platform): python -m waitress --port=5000 app:app
+waitress>=3.0

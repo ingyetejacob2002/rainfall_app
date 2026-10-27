@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f4f7fb">
+  <meta name="description" content="Benue State weather intelligence, live weather observations and model predictions.">
+  <title>Benue Weather</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#dashboard" aria-label="Benue Weather Intelligence home">
+        <span class="brand-icon">☀</span>
+        <span class="brand-copy">
+          <strong>Benue Weather</strong>
+          <small>FORCAST</small>
+        </span>
+      </a>
+
+      <div class="sidebar-caption">WORKSPACE</div>
+      <nav class="navigation" aria-label="Main navigation">
+        <button class="nav-item active" data-section="dashboard">
+          <span class="nav-icon">▦</span> Dashboard
+        </button>
+        <button class="nav-item" data-section="forecast">
+          <span class="nav-icon">◷</span> Forecast
+        </button>
+        <button class="nav-item" data-section="map">
+          <span class="nav-icon">⌖</span> Weather Map
+        </button>
+        <button class="nav-item" data-section="ai">
+          <span class="nav-icon">✦</span> Quick Prediction
+        </button>
+        <button class="nav-item" data-section="performance">
+          <span class="nav-icon">▥</span> Model Performance
+        </button>
+        <button class="nav-item" data-section="locations">
+          <span class="nav-icon">◎</span> Locations
+        </button>
+        <button class="nav-item" data-section="about">
+          <span class="nav-icon">ⓘ</span> About
+        </button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="connection-card">
+          <span class="status-dot" id="backendStatusDot"></span>
+          <div>
+            <strong id="backendStatusText">Checking backend…</strong>
+            <small id="backendStatusDetail">API connection</small>
+          </div>
+        </div>
+        <div class="sidebar-footer">Benue State, Nigeria</div>
+      </div>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="icon-button mobile-menu-button" id="mobileMenu" aria-label="Open navigation" aria-expanded="false">☰</button>
+          <div>
+            <div class="eyebrow">WEATHER FORCASTING SYSTEM</div>
+            <h1 id="pageTitle" style="color: blue;">Weather Dashboard</h1>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <span class="live-indicator"><span></span> Live weather</span>
+          <button class="icon-button" id="refreshButton" aria-label="Refresh weather" title="Refresh data">↻</button>
+          <div class="avatar">BW</div>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <section class="page-section active" id="dashboardSection">
+          <div class="welcome-row">
+            <div>
+              <!-- <h2>Weather at a glance</h2> -->
+              <p style="color: blue;">Live weather conditions and intelligence across Benue State.</p>
+            </div>
+            <div class="date-chip" id="currentDateLabel">Loading date…</div>
+          </div>
+
+          <div class="search-bar">
+            <span class="search-symbol">⌕</span>
+            <input id="locationSearch" type="search" placeholder="Search a town or LGA in Benue State…" autocomplete="off">
+            <button class="primary-button" id="searchButton">Search</button>
+            <div class="search-results" id="searchResults"></div>
+          </div>
+
+          <div class="weather-hero">
+            <div class="hero-orb" aria-hidden="true">☀</div>
+            <div class="hero-main">
+              <span class="hero-kicker">CURRENT CONDITIONS</span>
+              <h2 id="currentLocationName">Makurdi, Benue State</h2>
+              <div class="temperature-line">
+                <span id="currentTemperature">--</span><sup>°C</sup>
+              </div>
+              <p id="weatherCondition">Loading live conditions…</p>
+              <span class="hero-updated" id="lastUpdated">Waiting for weather data</span>
+            </div>
+            <div class="hero-extra">
+              <div><span>Feels like</span><strong id="feelsLike">--°C</strong></div>
+              <div><span>Today's low</span><strong id="lowTemperature">--°C</strong></div>
+              <div><span>Today's high</span><strong id="highTemperature">--°C</strong></div>
+            </div>
+          </div>
+
+          <div class="metric-grid">
+            <article class="metric-card">
+              <div class="metric-icon violet">◉</div>
+              <span>Humidity</span>
+              <strong id="metricHumidity">--%</strong>
+              <small>Relative humidity</small>
+            </article>
+            <article class="metric-card">
+              <div class="metric-icon blue">➤</div>
+              <span>Wind speed</span>
+              <strong id="metricWind">-- km/h</strong>
+              <small id="metricWindDirection">Wind direction: --</small>
+            </article>
+            <article class="metric-card">
+              <div class="metric-icon orange">☂</div>
+              <span>Precipitation probability</span>
+              <strong id="metricRainChance">--%</strong>
+              <small>Hourly forecast estimate</small>
+            </article>
+            <article class="metric-card">
+              <div class="metric-icon green">✦</div>
+              <span>Model confidence</span>
+              <strong id="modelConfidence">--</strong>
+              <div class="confidence-track"><span id="confidenceBar"></span></div>
+              <small>Reported by prediction API</small>
+            </article>
+          </div>
+
+          <div class="section-heading">
+            <div><h2>Today's hourly forecast</h2><p>Local time ·  forecast</p></div>
+            <button class="text-button" data-goto="forecast">View full forecast →</button>
+          </div>
+          <div class="hourly-grid" id="hourlyForecast">
+            <div class="empty-state">Loading hourly forecast…</div>
+          </div>
+
+          <div class="content-grid">
+            <article class="panel map-panel">
+              <div class="panel-heading">
+                <div><h3>Weather across Benue</h3><p>Explore weather locations on the map</p></div>
+                <button class="text-button" data-goto="map">Expand map ↗</button>
+              </div>
+              <div class="map-container" id="weatherMap"></div>
+            </article>
+            <article class="panel insight-panel">
+              <div class="panel-heading">
+                <div><h3>Weather insight</h3><p>Current conditions summary</p></div>
+                <span class="mini-badge">LIVE</span>
+              </div>
+              <div class="insight-icon">✧</div>
+              <h4 id="weatherInsightTitle">Weather insight</h4>
+              <p id="weatherInsight">Live observations will appear here after weather data loads.</p>
+              <div class="insight-divider"></div>
+              <div class="data-source-row"><span>Weather source</span><strong>Benue Weather Model</strong></div>
+              <div class="data-source-row"><span>Forecast timezone</span><strong>Africa/Lagos</strong></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="page-section" id="forecastSection">
+          <div class="welcome-row">
+            <div><p style="color: blue;">Hourly and daily forecast for your selected location.</p></div>
+            <span class="source-pill">Current Condition</span>
+          </div>
+          <div class="panel">
+            <div class="panel-heading">
+              <div><h3>Next 24 hours</h3><p>Temperature and precipitation probability</p></div>
+            </div>
+            <div class="hourly-grid forecast-hourly-grid" id="fullHourlyForecast">
+              <div class="empty-state">Loading forecast…</div>
+            </div>
+          </div>
+          <div class="panel section-panel">
+            <div class="panel-heading"><div><h3>7-day forecast</h3><p>Calendar-aligned local dates</p></div></div>
+            <div class="daily-list" id="dailyForecast"><div class="empty-state">Loading daily forecast…</div></div>
+          </div>
+        </section>
+
+        <section class="page-section" id="mapSection">
+          <div class="welcome-row">
+            <div><p style="color: blue;">Explore Benue State locations and select an LGA to view its weather.</p></div>
+            <button class="secondary-button" id="mapLocateButton">⌖ Locate me</button>
+          </div>
+          <div class="panel full-map-panel">
+            <div class="panel-heading"><div><h3>Benue State interactive map</h3><p>Choose a marker to change the active weather location.</p></div></div>
+            <div class="map-container full-map" id="fullWeatherMap"></div>
+          </div>
+          <div class="location-summary" id="mapLocationSummary"></div>
+        </section>
+
+        <section class="page-section" id="aiSection">
+          <div class="welcome-row">
+            <div><p style="color: blue;">Submit weather conditions to your trained prediction model.</p></div>
+            <span class="source-pill">Model API</span>
+          </div>
+
+          <div class="notice-banner">
+            <span>✦</span>
+            <div><strong>Model prediction, not a weather observation</strong><p>Live Open-Meteo values can help populate the inputs. The prediction result comes from the trained Benue rainfall model (Python backend).</p></div>
+          </div>
+
+          <div class="content-grid prediction-layout">
+            <form class="panel form-panel" id="predictionForm">
+              <div class="panel-heading"><div><h3>Prediction inputs</h3><p>Provide the selected LGA and weather measurements.</p></div></div>
+              <div class="form-grid">
+                <label class="field full-field">Local Government Area
+                  <select id="predictionLga" name="lga" required><option value="Makurdi">Makurdi</option></select>
+                </label>
+                <label class="field">Temperature (°C)
+                  <input id="predictionTemperature" name="temperature" type="number" step="0.1" required placeholder="e.g. 31.5">
+                </label>
+                <label class="field">Humidity (%)
+                  <input id="predictionHumidity" name="humidity" type="number" min="0" max="100" step="0.1" required placeholder="e.g. 72">
+                </label>
+                <label class="field">Wind speed (km/h)
+                  <input id="predictionWindSpeed" name="wind_speed" type="number" min="0" step="0.1" required placeholder="e.g. 8.2">
+                </label>
+                <label class="field">Temperature 1 hour ago (°C)
+                  <input id="predictionTemperaturePrevious" name="temperature_1hr_ago" type="number" step="0.1" required placeholder="e.g. 30.8">
+                </label>
+                <label class="field">Humidity 1 hour ago (%)
+                  <input id="predictionHumidityPrevious" name="humidity_1hr_ago" type="number" min="0" max="100" step="0.1" required placeholder="e.g. 75">
+                </label>
+                <label class="field">Date
+                  <input id="predictionDate" name="date" type="date" required>
+                </label>
+                <label class="field">Hour (local time)
+                  <select id="predictionHour" name="hour" required></select>
+                </label>
+                <label class="field full-field">Precipitation input
+                  <select id="predictionRain" name="use_rain">
+                    <option value="auto">Weather only (automatic)</option>
+                    <option value="1">Include recent rainfall (enter amounts)</option>
+                    <option value="0">Exclude precipitation</option>
+                  </select>
+                </label>
+                <label class="field rain-field" hidden>Rain in last 1 h (mm)
+                  <input id="predictionRain1h" name="rain_last_1h" type="number" min="0" step="0.1" placeholder="e.g. 0.8">
+                </label>
+                <label class="field rain-field" hidden>Rain in last 6 h (mm)
+                  <input id="predictionRain6h" name="rain_last_6h" type="number" min="0" step="0.1" placeholder="e.g. 2.5">
+                </label>
+                <label class="field rain-field" hidden>Rain in last 24 h (mm)
+                  <input id="predictionRain24h" name="rain_last_24h" type="number" min="0" step="0.1" placeholder="e.g. 6">
+                </label>
+              </div>
+              <div class="form-actions">
+                <button class="secondary-button" type="button" id="fillLiveWeatherButton">↙ Use live weather</button>
+                <button class="primary-button" type="submit" id="runPredictionButton">Run prediction <span>→</span></button>
+              </div>
+              <p class="form-help">The one-hour-ago values must be supplied from observations or hourly historical data. Earlier hours are assumed steady; for reliable results use Batch evaluation with real hourly history.</p>
+            </form>
+
+            <div class="panel result-panel">
+              <div class="panel-heading"><div><h3>Prediction result</h3><p>Output returned by your model API</p></div><span class="mini-badge">RESULT</span></div>
+              <div id="predictionOutput" class="prediction-output">
+                <div class="result-placeholder"><div class="placeholder-icon">✦</div><h4>Ready when you are</h4><p>Enter your weather inputs and run a prediction to view the model response.</p></div>
+              </div>
+              <div class="result-meta" id="predictionMeta"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="page-section" id="performanceSection">
+          <div class="welcome-row">
+            <div><p style="color: blue;">Evaluate the model, inspect available metrics, and analyse batch results.</p></div>
+            <button class="secondary-button" id="refreshMetricsButton">↻ Refresh metrics</button>
+          </div>
+
+          <div class="metric-grid performance-metrics" id="metricsGrid">
+            <article class="metric-card"><div class="metric-icon violet">◉</div><span>Model status</span><strong id="performanceModelStatus">Loading</strong><small>Backend health</small></article>
+            <article class="metric-card"><div class="metric-icon blue">▥</div><span>MAE</span><strong id="metricMae">—</strong><small>Mean absolute error</small></article>
+            <article class="metric-card"><div class="metric-icon orange">⌁</div><span>RMSE</span><strong id="metricRmse">—</strong><small>Root mean squared error</small></article>
+            <article class="metric-card"><div class="metric-icon green">✓</div><span>R² score</span><strong id="metricR2">—</strong><small>Coefficient of determination</small></article>
+          </div>
+
+          <div class="content-grid prediction-layout">
+            <form class="panel form-panel" id="performanceForm">
+              <div class="panel-heading"><div><h3>Evaluate a weather sample</h3><p>Submit a single-hour sample to the model.</p></div></div>
+              <div class="form-grid">
+                <label class="field full-field">Local Government Area
+                  <select id="performanceLga" name="lga" required><option value="Makurdi">Makurdi</option></select>
+                </label>
+                <label class="field">Temperature (°C)
+                  <input id="performanceTemperature" name="temperature" type="number" step="0.1" required>
+                </label>
+                <label class="field">Humidity (%)
+                  <input id="performanceHumidity" name="humidity" type="number" min="0" max="100" step="0.1" required>
+                </label>
+                <label class="field">Wind speed (km/h)
+                  <input id="performanceWindSpeed" name="wind_speed" type="number" min="0" step="0.1" required>
+                </label>
+                <label class="field">Temperature 1 hour ago (°C)
+                  <input id="performanceTemperaturePrevious" name="temperature_1hr_ago" type="number" step="0.1" required>
+                </label>
+                <label class="field">Humidity 1 hour ago (%)
+                  <input id="performanceHumidityPrevious" name="humidity_1hr_ago" type="number" min="0" max="100" step="0.1" required>
+                </label>
+                <label class="field">Date
+                  <input id="performanceDate" name="date" type="date" required>
+                </label>
+                <label class="field">Hour (local time)
+                  <select id="performanceHour" name="hour" required></select>
+                </label>
+                <label class="field full-field">Precipitation input
+                  <select id="performanceRain" name="use_rain">
+                    <option value="auto">Weather only (automatic)</option>
+                    <option value="1">Include recent rainfall (enter amounts)</option>
+                    <option value="0">Exclude precipitation</option>
+                  </select>
+                </label>
+                <label class="field rain-field" hidden>Rain in last 1 h (mm)
+                  <input id="performanceRain1h" name="rain_last_1h" type="number" min="0" step="0.1" placeholder="e.g. 0.8">
+                </label>
+                <label class="field rain-field" hidden>Rain in last 6 h (mm)
+                  <input id="performanceRain6h" name="rain_last_6h" type="number" min="0" step="0.1" placeholder="e.g. 2.5">
+                </label>
+                <label class="field rain-field" hidden>Rain in last 24 h (mm)
+                  <input id="performanceRain24h" name="rain_last_24h" type="number" min="0" step="0.1" placeholder="e.g. 6">
+                </label>
+              </div>
+              <div class="form-actions">
+                <button class="secondary-button" type="button" id="fillPerformanceLiveButton">↙ Use live weather</button>
+                <button class="primary-button" type="submit" id="runPerformanceButton">Evaluate sample →</button>
+              </div>
+              <div id="performanceResult" class="inline-result" aria-live="polite"></div>
+            </form>
+
+            <div class="panel">
+              <div class="panel-heading"><div><h3>Model reference</h3><p>Configuration and available evaluation data</p></div></div>
+              <div id="referenceContent" class="reference-content"><div class="empty-state">Loading model reference…</div></div>
+              <div class="insight-divider"></div>
+              <div class="panel-heading"><div><h3>Batch evaluation</h3><p>Upload a CSV dataset for evaluation</p></div></div>
+              <form id="batchForm" class="batch-form">
+                <label class="field">Dataset file (CSV)
+                  <input id="batchFile" type="file" name="file" accept=".csv,text/csv" required>
+                </label>
+                <label class="field">Precipitation feature
+                  <select id="batchRain" name="use_rain">
+                    <option value="auto">Automatic</option>
+                    <option value="1">Include precipitation</option>
+                    <option value="0">Exclude precipitation</option>
+                  </select>
+                </label>
+                <button class="primary-button" type="submit" id="runBatchButton">Run batch evaluation →</button>
+              </form>
+              <p class="form-help">Columns: <code>datetime, lga, temperature_c, humidity_percent, wind_speed_kmh</code> (+ optional <code>rainfall_mm</code>). Strictly hourly per LGA, at least 74 hours. <a href="{{ url_for('sample') }}">Download a sample file</a>.</p>
+              <div id="batchResult" class="batch-result" aria-live="polite"></div>
+            </div>
+          </div>
+
+          <div class="panel section-panel">
+            <div class="panel-heading">
+              <div><h3>Batch prediction time series</h3><p>Inspect returned results for a selected LGA.</p></div>
+              <button class="secondary-button" id="downloadBatchButton" disabled>↓ Download CSV</button>
+            </div>
+            <div class="series-controls">
+              <label class="field">Batch ID<input id="seriesBatchId" type="text" placeholder="Batch ID returned by API"></label>
+              <label class="field">LGA<select id="seriesLga"><option value="Makurdi">Makurdi</option></select></label>
+              <button class="primary-button" id="loadSeriesButton" type="button">Load series</button>
+            </div>
+            <div id="seriesSummary" class="series-summary"></div>
+            <div class="series-chart-wrap"><canvas id="seriesChart" height="100" aria-label="Batch prediction time series chart"></canvas></div>
+            <div class="table-scroll"><table class="data-table"><thead id="seriesTableHead"><tr><th>Time</th><th>Prediction</th></tr></thead><tbody id="seriesTableBody"><tr><td colspan="2">No batch series loaded.</td></tr></tbody></table></div>
+          </div>
+        </section>
+
+        <section class="page-section" id="locationsSection">
+          <div class="welcome-row"><div><p style="color: blue;">Select a location to update the live weather dashboard.</p></div></div>
+          <div class="locations-grid" id="locationsGrid"></div>
+        </section>
+
+        <section class="page-section" id="aboutSection">
+          <div class="welcome-row"><p style="color:blue;">Weather observations, forecasts, and model-driven analysis.</p></div>
+          <div class="content-grid">
+            <article class="panel about-card"><div class="metric-icon blue">☀</div><h3>Open-Meteo weather</h3><p>Live current conditions, hourly history, and forecast values are fetched from Open-Meteo for the selected location.</p></article>
+            <article class="panel about-card"><div class="metric-icon violet">✦</div><h3>Prediction backend</h3><p>Your own backend serves model health, reference data, evaluation metrics, single-hour predictions, and batch results.</p></article>
+          </div>
+          <div class="panel section-panel"><h3>Data and prediction notes</h3><p class="muted-text">Weather data is fetched over the network and may be unavailable temporarily. Model metrics and predictions are displayed only when returned by the configured API. Prediction accuracy depends on the training data, feature definitions, and evaluation methodology used by your model.</p></div>
+        </section>
+
+        <footer class="page-footer"><span>Benue Weather Forcast</span><span>Weather: Location: Benue State, Nigeria</span></footer>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite">
+    <span id="toastIcon">ℹ</span><span id="toastMessage">Ready</span>
+    <button id="toastClose" aria-label="Dismiss notification">×</button>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="{{ url_for('static', filename='js/index.js') }}"></script>
+</body>
+</html>
